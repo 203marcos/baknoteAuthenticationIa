@@ -210,7 +210,7 @@ def resumir_resultados(results):
   return summarize_results(results)
 
 if __name__ == '__main__':
-  caminho = '/home/av2Ia/data_banknote_authentication.txt'
+  caminho = 'data/data_banknote_authentication.txt'
   X, y = carregar_dados_notas(caminho_local=caminho)
 
   data = np.loadtxt(caminho, delimiter=',')

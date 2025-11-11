@@ -1,5 +1,5 @@
 import numpy as np
-from av2_classificador import load_banknote_data, cross_validate, KNN
+from main.av2_classificador import load_banknote_data, cross_validate, KNN
 
 path = '/home/av2Ia/data_banknote_authentication.txt'
 X, y = load_banknote_data(local_path=path)
