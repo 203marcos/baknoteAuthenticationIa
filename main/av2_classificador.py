@@ -33,67 +33,84 @@ def f1_score(y_true, y_pred, positive=1):
   return 2 * (p * recall) / (p + recall)
 
 class KNN:
-  def __init__(self, k=3, distance='euclidean'):
-    self.k = k
+  def __init__(self, k=3, task='classification', distance='euclidean'):
+    self.k = int(k)
+    self.task = task
     if distance not in ('euclidean', 'manhattan'):
       raise ValueError("distance must be 'euclidean' or 'manhattan'")
     self.distance = distance
 
   def fit(self, X, y):
-    self.X_train = X.copy()
-    self.y_train = y.copy()
+    self.X_train = np.asarray(X)
+    self.y_train = np.asarray(y)
+
+  def _euclidean(self, x1, x2):
+    # correct euclidean distance
+    return np.sqrt(np.sum((x1 - x2) ** 2))
+
+  def _manhattan(self, x1, x2):
+    return np.sum(np.abs(x1 - x2))
 
   def _distances(self, x):
     if self.distance == 'euclidean':
+      # vectorized euclidean distances
       dif = self.X_train - x
-      dists = np.sqrt(np.sum(dif**2, axis=1))
+      return np.sqrt(np.sum(dif ** 2, axis=1))
     else:
-      dists = np.sum(np.abs(self.X_train - x), axis=1)
-    return dists
+      return np.sum(np.abs(self.X_train - x), axis=1)
+
+  def _predict_one(self, x):
+    dists = self._distances(x)
+    idx = np.argsort(dists)[:self.k]
+    k_labels = self.y_train[idx]
+    if self.task == 'classification':
+      unique, counts = np.unique(k_labels, return_counts=True)
+      # choose most frequent; break ties by smallest label
+      max_count = counts.max()
+      candidates = unique[counts == max_count]
+      return int(np.min(candidates))
+    elif self.task == 'regression':
+      return float(np.mean(k_labels))
+    else:
+      raise ValueError('task must be "classification" or "regression"')
 
   def predict(self, X):
-    y_pred = []
-    for x in X:
-      dists = self._distances(x)
-      idx = np.argsort(dists)[:self.k]
-      votes = self.y_train[idx]
-      most_common = Counter(votes).most_common()
-      top_count = most_common[0][1]
-      top_labels = [lab for lab, cnt in most_common if cnt == top_count]
-      pred = min(top_labels)
-      y_pred.append(pred)
-    return np.array(y_pred)
+    X = np.asarray(X)
+    return np.array([self._predict_one(x) for x in X])
 
 class GaussianNaiveBayes:
   def fit(self, X, y):
-    self.classes = np.unique(y)
-    self.means = {}
-    self.vars = {}
-    self.priors = {}
-    for c in self.classes:
-      Xc = X[y == c]
-      self.means[c] = np.mean(Xc, axis=0)
-      self.vars[c] = np.var(Xc, axis=0)
-      self.priors[c] = Xc.shape[0] / X.shape[0]
-
-  def _gaussian_prob(self, x, mean, var):
-    eps = 1e-9
-    coef = 1.0 / np.sqrt(2.0 * np.pi * (var + eps))
-    exponent = - ((x - mean) ** 2) / (2.0 * (var + eps))
-    return coef * np.exp(exponent)
+    # calcula média, variância (pop) e priors por classe
+    n_samples, n_features = X.shape
+    self._classes = np.unique(y)
+    n_classes = len(self._classes)
+    self._mean = np.zeros((n_classes, n_features), dtype=np.float64)
+    self._var = np.zeros((n_classes, n_features), dtype=np.float64)
+    self._priors = np.zeros(n_classes, dtype=np.float64)
+    for idx, c in enumerate(self._classes):
+      X_c = X[y == c]
+      self._mean[idx, :] = X_c.mean(axis=0)
+      self._var[idx, :] = X_c.var(axis=0) + 1e-9
+      self._priors[idx] = X_c.shape[0] / float(n_samples)
 
   def predict(self, X):
-    y_pred = []
-    for x in X:
-      posteriors = {}
-      for c in self.classes:
-        prior = np.log(self.priors[c])
-        probs = self._gaussian_prob(x, self.means[c], self.vars[c])
-        log_likelihood = np.sum(np.log(probs + 1e-12))
-        posteriors[c] = prior + log_likelihood
-      pred = max(posteriors.items(), key=lambda t: t[1])[0]
-      y_pred.append(pred)
-    return np.array(y_pred)
+    return np.array([self._predict(x) for x in X])
+
+  def _predict(self, x):
+    posteriors = []
+    for idx, c in enumerate(self._classes):
+      prior = np.log(self._priors[idx])
+      log_likelihood = np.sum(np.log(self._pdf(idx, x) + 1e-12))
+      posteriors.append(prior + log_likelihood)
+    best_idx = int(np.argmax(posteriors))
+    return self._classes[best_idx]
+
+  def _pdf(self, class_idx, x):
+    mean = self._mean[class_idx]
+    var = self._var[class_idx]
+    numerator = np.exp(-((x - mean) ** 2) / (2 * var))
+    denominator = np.sqrt(2 * np.pi * var)
+    return numerator / denominator
 
 class MultivariateGaussianBayes:
   def fit(self, X, y):
