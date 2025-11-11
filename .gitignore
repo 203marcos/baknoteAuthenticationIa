@@ -1,0 +1,50 @@
+# Virtualenv
+venv/
+.env
+env/
+.venv/
+
+# Bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+.eggs/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+
+# IDE / editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs, DBs, chaves, outputs
+*.log
+*.sqlite3
+*.db
+*.pem
+*.key
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Arquivos grandes/temporários (adicione aqui se quiser ignorar datasets)
+# exemplo: data/ ou *.csv
+# data/
+# *.csv
+
+# Se quiser manter um dataset no repo, NÃO o ignore; caso contrário remova o comentário:
+# data_banknote_authentication.txt
