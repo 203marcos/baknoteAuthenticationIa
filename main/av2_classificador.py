@@ -1,12 +1,34 @@
 # av2_classifiers.py
 import numpy as np
+import urllib.request
+import io
 import time
 from collections import Counter
 
 def load_banknote_data(url=None, local_path=None):
-  """Retorna X (n_amostras, n_atributos) e y (n_amostras,)"""
-  if local_path:
+  """Retorna X (n_amostras, n_atributos) e y (n_amostras,)
+
+  Tenta baixar de `url` primeiro (se fornecido). Se falhar, tenta carregar de
+  `local_path` (se fornecido). Levanta erro se nenhum dos dois funcionar.
+  """
+  data = None
+  # tentar url primeiro (se fornecida)
+  if url:
+    try:
+      resp = urllib.request.urlopen(url, timeout=10)
+      raw = resp.read()
+      s = raw.decode('utf-8')
+      data = np.genfromtxt(io.StringIO(s), delimiter=',')
+    except Exception:
+      data = None
+
+  # fallback para arquivo local
+  if data is None and local_path:
     data = np.loadtxt(local_path, delimiter=',')
+
+  if data is None:
+    raise ValueError('Não foi possível carregar os dados: forneça uma URL válida ou um caminho local existente')
+
   X = data[:, :-1]
   y = data[:, -1].astype(int)
   return X, y
@@ -227,10 +249,11 @@ def resumir_resultados(results):
   return summarize_results(results)
 
 if __name__ == '__main__':
-  caminho = 'data/data_banknote_authentication.txt'
-  X, y = carregar_dados_notas(caminho_local=caminho)
+  #caminho = 'data/data_banknote_authentication.txt'
+  url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00267/data_banknote_authentication.txt'
+  X, y = carregar_dados_notas(url=url,)
 
-  data = np.loadtxt(caminho, delimiter=',')
+  data = np.loadtxt(url, delimiter=',')
   uniq_rows, counts = np.unique(data, axis=0, return_counts=True)
   n_total = data.shape[0]
   n_unique = uniq_rows.shape[0]
